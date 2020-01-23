@@ -38,8 +38,8 @@ import * as path from 'path';
 import { existsSync } from 'fs';
 
 import { uniqueId } from '@bfemulator/sdk-shared';
+import { TunnelInfo, TunnelStatus } from '@bfemulator/app-shared';
 
-import { TunnelInfo, TunnelStatus } from './state/actions/ngrokTunnelActions';
 import { ensureStoragePath, writeFile, writeStream, FileWriteStream } from './utils';
 import { PostmanNgrokCollection } from './utils/postmanNgrokCollection';
 

@@ -33,8 +33,8 @@
 
 import React, { useEffect, useState } from 'react';
 import { Column, Row, LinkButton, MediumHeader, SmallHeader } from '@bfemulator/ui-react';
+import { TunnelError, TunnelStatus } from '@bfemulator/app-shared';
 
-import { TunnelError, TunnelStatus } from '../../../state';
 import { GenericDocument } from '../../layout';
 
 import { NgrokErrorHandler } from './ngrokErrorHandler';

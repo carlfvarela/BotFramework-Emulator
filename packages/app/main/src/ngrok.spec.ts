@@ -32,9 +32,10 @@
 //
 import { join } from 'path';
 
+import { TunnelStatus, TunnelError } from '@bfemulator/app-shared';
+
 import './fetchProxy';
 import { intervals, NgrokInstance } from './ngrok';
-import { TunnelStatus, TunnelError } from './state/actions/ngrokTunnelActions';
 
 const mockExistsSync = jest.fn(() => true);
 
