@@ -30,14 +30,16 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-import { newNotification, FrameworkSettings } from '@bfemulator/app-shared';
-import { ForkEffect, put, select, takeEvery } from 'redux-saga/effects';
+import { newNotification, FrameworkSettings, SharedConstants } from '@bfemulator/app-shared';
+import { ForkEffect, call, put, select, takeEvery } from 'redux-saga/effects';
+import { CommandServiceImpl, CommandServiceInstance } from '@bfemulator/sdk-shared';
 
 import * as EditorActions from '../actions/editorActions';
 import { FrameworkAction, FrameworkActionType, setFrameworkSettings } from '../actions/frameworkSettingsActions';
 import { beginAdd } from '../actions/notificationActions';
 import { Document } from '../reducers/editor';
 import { RootState } from '../store';
+import { getSettingsDelta } from '../../utils';
 
 export const activeDocumentSelector = (state: RootState) => {
   const { editors, activeEditor } = state.editor;
@@ -45,7 +47,12 @@ export const activeDocumentSelector = (state: RootState) => {
   return editors[activeEditor].documents[activeDocumentId];
 };
 
+export const getFrameworkSettings = (state: RootState): FrameworkSettings => state.framework;
+
 export class FrameworkSettingsSagas {
+  @CommandServiceInstance()
+  private static commandService: CommandServiceImpl;
+
   // when saving settings from the settings editor we need to mark the document as clean
   // and then set the settings
   public static *saveFrameworkSettings(action: FrameworkAction<FrameworkSettings>): IterableIterator<any> {
@@ -53,6 +60,16 @@ export class FrameworkSettingsSagas {
       const activeDoc: Document = yield select(activeDocumentSelector);
       yield put(EditorActions.setDirtyFlag(activeDoc.documentId, false)); // mark as clean
       yield put(setFrameworkSettings(action.payload));
+      const currentSettings = yield select(getFrameworkSettings);
+      const settingsDelta = getSettingsDelta(currentSettings, action.payload);
+      if (settingsDelta) {
+        yield call(
+          [FrameworkSettingsSagas.commandService, FrameworkSettingsSagas.commandService.remoteCall],
+          SharedConstants.Commands.Telemetry.TrackEvent,
+          'app_changeSettings',
+          settingsDelta
+        );
+      }
     } catch (e) {
       const errMsg = `Error while saving emulator settings: ${e}`;
       const notification = newNotification(errMsg);

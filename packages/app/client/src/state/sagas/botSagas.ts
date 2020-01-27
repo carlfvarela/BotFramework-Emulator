@@ -167,9 +167,13 @@ export class BotSagas {
         source: 'url',
       });
     }
-    if (!isLocalHostUrl(action.payload.endpoint)) {
-      BotSagas.commandService.remoteCall(SharedConstants.Commands.Telemetry.TrackEvent, 'livechat_openRemote').catch();
-    }
+    BotSagas.commandService
+      .remoteCall(SharedConstants.Commands.Telemetry.TrackEvent, 'livechat_open', {
+        isDebug: action.payload.mode === 'debug',
+        isGov: action.payload.channelService === 'azureusgovernment',
+        isRemote: !isLocalHostUrl(action.payload.endpoint),
+      })
+      .catch();
   }
 }
 

@@ -31,37 +31,19 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-import { SharedConstants } from '@bfemulator/app-shared';
-import { Command } from '@bfemulator/sdk-shared';
+import { FrameworkSettings } from '@bfemulator/app-shared';
 
-import { Emulator } from '../emulator';
-import { TelemetryService } from '../telemetry';
-
-const Commands = SharedConstants.Commands.Ngrok;
-
-/** Registers ngrok commands */
-export class NgrokCommands {
-  // ---------------------------------------------------------------------------
-  // Attempts to reconnect to a new ngrok tunnel
-  @Command(Commands.Reconnect)
-  protected async reconnectToNgrok(): Promise<any> {
-    const emulator = Emulator.getInstance();
-    try {
-      await emulator.ngrok.recycle();
-      emulator.ngrok.broadcastNgrokReconnected();
-      TelemetryService.trackEvent('ngrok_reconnect');
-    } catch (e) {
-      throw new Error(`There was an error while trying to reconnect ngrok: ${e}`);
+export function getSettingsDelta(
+  prevSettings: FrameworkSettings,
+  updatedSettings: FrameworkSettings
+): Partial<FrameworkSettings> {
+  const delta: Partial<FrameworkSettings> = {};
+  for (const key in updatedSettings) {
+    const prevVal = prevSettings[key];
+    const updatedVal = updatedSettings[key];
+    if (prevVal !== updatedVal) {
+      delta[key] = updatedVal;
     }
   }
-
-  @Command(Commands.KillProcess)
-  protected killNgrokProcess() {
-    Emulator.getInstance().ngrok.kill();
-  }
-
-  @Command(Commands.PingTunnel)
-  protected pingForStatusOfTunnel() {
-    Emulator.getInstance().ngrok.pingTunnel();
-  }
+  return Object.keys(delta).length ? delta : undefined;
 }

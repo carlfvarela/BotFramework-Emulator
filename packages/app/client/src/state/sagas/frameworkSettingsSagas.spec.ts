@@ -30,7 +30,7 @@
 // OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
-import { newNotification, SharedConstants } from '@bfemulator/app-shared';
+import { newNotification, SharedConstants, FrameworkSettings } from '@bfemulator/app-shared';
 import { applyMiddleware, combineReducers, createStore } from 'redux';
 import sagaMiddlewareFactory from 'redux-saga';
 import { call, put, select, takeEvery } from 'redux-saga/effects';
@@ -47,7 +47,12 @@ import { beginAdd } from '../actions/notificationActions';
 import { editor } from '../reducers/editor';
 import { framework } from '../reducers/framework';
 
-import { activeDocumentSelector, frameworkSettingsSagas, FrameworkSettingsSagas } from './frameworkSettingsSagas';
+import {
+  activeDocumentSelector,
+  frameworkSettingsSagas,
+  getFrameworkSettings,
+  FrameworkSettingsSagas,
+} from './frameworkSettingsSagas';
 
 jest.mock('electron', () => ({
   ipcMain: new Proxy(
@@ -108,14 +113,42 @@ describe('The frameworkSettingsSagas', () => {
   });
 
   it('should save the framework settings', async () => {
-    const it = FrameworkSettingsSagas.saveFrameworkSettings(saveFrameworkSettingsAction({}));
+    const currentSettings: Partial<FrameworkSettings> = {
+      autoUpdate: false,
+      useCustomId: false,
+      usePrereleases: false,
+      userGUID: '',
+      ngrokPath: 'some/path/to/ngrok',
+    };
+    const updatedSettings: Partial<FrameworkSettings> = {
+      autoUpdate: true,
+      useCustomId: true,
+      usePrereleases: false,
+      userGUID: 'some-user-id',
+      ngrokPath: 'some/different/path/to/ngrok',
+    };
+    const it = FrameworkSettingsSagas.saveFrameworkSettings(saveFrameworkSettingsAction(updatedSettings));
     // selector to get the active document from the state
     const selector = it.next().value;
     expect(selector).toEqual(select(activeDocumentSelector));
     const value = selector.SELECT.selector(mockStore.getState());
     // put the dirty state to false
     expect(it.next(value).value).toEqual(put(EditorActions.setDirtyFlag(value.documentId, false)));
-    expect(it.next().value).toEqual(put(setFrameworkSettings({})));
+    expect(it.next().value).toEqual(put(setFrameworkSettings(updatedSettings)));
+    expect(it.next().value).toEqual(select(getFrameworkSettings));
+    expect(it.next(currentSettings).value).toEqual(
+      call(
+        [commandService, commandService.remoteCall],
+        SharedConstants.Commands.Telemetry.TrackEvent,
+        'app_changeSettings',
+        {
+          autoUpdate: true,
+          useCustomId: true,
+          userGUID: 'some-user-id',
+          ngrokPath: 'some/different/path/to/ngrok',
+        }
+      )
+    );
     expect(it.next().done).toBe(true);
   });
 

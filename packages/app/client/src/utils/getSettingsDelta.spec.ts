@@ -1,9 +1,4 @@
 //
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license.
-//
-// Microsoft Bot Framework: http://botframework.com
-//
 // Bot Framework Emulator Github:
 // https://github.com/Microsoft/BotFramwork-Emulator
 //
@@ -31,37 +26,43 @@
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-import { SharedConstants } from '@bfemulator/app-shared';
-import { Command } from '@bfemulator/sdk-shared';
+import { FrameworkSettings } from '@bfemulator/app-shared';
 
-import { Emulator } from '../emulator';
-import { TelemetryService } from '../telemetry';
+import { getSettingsDelta } from './getSettingsDelta';
 
-const Commands = SharedConstants.Commands.Ngrok;
+describe('getSettingsDelta', () => {
+  it('should return an object containing the delta between 2 settings objects', () => {
+    const currentSettings: Partial<FrameworkSettings> = {
+      autoUpdate: true,
+      use10Tokens: true,
+      usePrereleases: true,
+      userGUID: 'some-id',
+    };
+    const updatedSettings: Partial<FrameworkSettings> = {
+      autoUpdate: true,
+      use10Tokens: false,
+      usePrereleases: false,
+      userGUID: 'some-other-id',
+      runNgrokAtStartup: true,
+    };
 
-/** Registers ngrok commands */
-export class NgrokCommands {
-  // ---------------------------------------------------------------------------
-  // Attempts to reconnect to a new ngrok tunnel
-  @Command(Commands.Reconnect)
-  protected async reconnectToNgrok(): Promise<any> {
-    const emulator = Emulator.getInstance();
-    try {
-      await emulator.ngrok.recycle();
-      emulator.ngrok.broadcastNgrokReconnected();
-      TelemetryService.trackEvent('ngrok_reconnect');
-    } catch (e) {
-      throw new Error(`There was an error while trying to reconnect ngrok: ${e}`);
-    }
-  }
+    expect(getSettingsDelta(currentSettings, updatedSettings)).toEqual({
+      use10Tokens: false,
+      usePrereleases: false,
+      userGUID: 'some-other-id',
+      runNgrokAtStartup: true,
+    });
+  });
 
-  @Command(Commands.KillProcess)
-  protected killNgrokProcess() {
-    Emulator.getInstance().ngrok.kill();
-  }
+  it('should return undefined for settings objects that do not contain a delta', () => {
+    const currentSettings: Partial<FrameworkSettings> = {
+      autoUpdate: true,
+      use10Tokens: true,
+      usePrereleases: true,
+      userGUID: 'some-id',
+    };
+    const updatedSettings = currentSettings;
 
-  @Command(Commands.PingTunnel)
-  protected pingForStatusOfTunnel() {
-    Emulator.getInstance().ngrok.pingTunnel();
-  }
-}
+    expect(getSettingsDelta(currentSettings, updatedSettings)).toBe(undefined);
+  });
+});
